@@ -2,6 +2,8 @@
 
 import { useChat } from 'ai/react';
 import { useEffect, useRef } from 'react';
+import { WeatherCard } from './components/WeatherCard';
+import { parseWeatherData } from '@/lib/parseWeather';
 
 export default function Home() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
@@ -17,7 +19,7 @@ export default function Home() {
         {/* Header */}
         <div className="text-center py-8">
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-            🌤️ Smart Weather Assistant
+            Smart Weather Assistant
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
             Ask me about weather anywhere in the world, and I'll help you plan!
@@ -45,24 +47,32 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                {messages.map((message) => {
+                  if (message.role === 'user') {
+                    return (
+                      <div key={message.id} className="flex justify-end">
+                        <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-600 text-white whitespace-pre-wrap">
+                          {message.content}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const { cleanText, weatherData } = parseWeatherData(message.content);
+
+                  return (
+                    <div key={message.id} className="flex justify-start">
+                      <div className="max-w-[80%] space-y-2">
+                        {weatherData && <WeatherCard data={weatherData} />}
+                        {cleanText && (
+                          <div className="rounded-2xl px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white whitespace-pre-wrap">
+                            {cleanText}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </>
             )}

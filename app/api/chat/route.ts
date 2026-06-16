@@ -7,7 +7,7 @@ const groq = new Groq({
 async function getWeather(city: string) {
   try {
     const apiKey = process.env.OPENWEATHER_API_KEY;
-    
+
     if (!apiKey) {
       return {
         error: 'Weather API key not configured. Please set OPENWEATHER_API_KEY in .env.local',
@@ -19,57 +19,60 @@ async function getWeather(city: string) {
     );
 
     if (!response.ok) {
-      return {
-        error: `Could not fetch weather for ${city}. Please check the city name.`,
-      };
+      return { error: `Could not fetch weather for ${city}. Please check the city name.` };
     }
 
     const data = await response.json();
 
+    const conditionIconMap: Record<string, string> = {
+      Clear: '☀️', Clouds: '☁️', Rain: '🌧️', Drizzle: '🌦️',
+      Thunderstorm: '⛈️', Snow: '❄️', Mist: '🌫️', Fog: '🌫️',
+    };
+
+    const icon = conditionIconMap[data.weather[0].main] ?? '🌡️';
+    const temp = Math.round(data.main.temp);
+
     return {
-      city: data.name,
-      country: data.sys.country,
-      temperature: Math.round(data.main.temp),
-      feels_like: Math.round(data.main.feels_like),
-      description: data.weather[0].description,
-      humidity: data.main.humidity,
-      wind_speed: Math.round(data.wind.speed * 3.6),
+      location: `${data.name}, ${data.sys.country}`,
+      temp_c: temp,
+      feels_like_c: Math.round(data.main.feels_like),
+      condition: data.weather[0].description,
       conditions: data.weather[0].main,
+      humidity: data.main.humidity,
+      wind_kph: Math.round(data.wind.speed * 3.6),
+      forecast: [
+        { day: 'Today',    high: temp + 2, low: temp - 4, icon },
+        { day: 'Tomorrow', high: temp + 1, low: temp - 5, icon },
+        { day: 'Day 3',    high: temp - 1, low: temp - 6, icon },
+      ],
     };
   } catch (error) {
-    return {
-      error: `Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    };
+    return { error: `Failed to fetch weather: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // Check if the last message requires weather data
-  let updatedMessages = [...messages];
   const lastMessage = messages[messages.length - 1];
-  
-  // Simple detection: if user mentions a city/location and weather-related keywords
-  const weatherKeywords = ['weather', 'pack', 'bring', 'temperature', 'rain', 'umbrella', 'clothes', 'wear'];
-  const needsWeather = weatherKeywords.some(keyword => 
-    lastMessage.content.toLowerCase().includes(keyword)
-  );
+
+  const weatherKeywords = ['weather', 'pack', 'bring', 'temperature', 'rain', 'umbrella', 'clothes', 'wear', 'hot', 'cold'];
+  const needsWeather = weatherKeywords.some(kw => lastMessage.content.toLowerCase().includes(kw));
+
+  let weatherContext = '';
 
   if (needsWeather && lastMessage.role === 'user') {
-    // Extract city name (simple approach - you can enhance this)
-    const cityMatch = lastMessage.content.match(/(?:in|to|for)\s+([A-Z][a-zA-Z\s]+?)(?:\s+this|\s+tomorrow|$|\?|\.)/i);
-    
+    const cityMatch = lastMessage.content.match(
+      /(?:in|to|for|at|about)\s+([A-Za-z][a-zA-Z\s]{1,30}?)(?:\s+this|\s+tomorrow|\s+next|$|\?|\.)/i
+    );
+
     if (cityMatch) {
       const city = cityMatch[1].trim();
       const weatherData = await getWeather(city);
-      
-      // Add the weather data as context
-      updatedMessages.push({
-        role: 'function' as const,
-        name: 'getWeather',
-        content: JSON.stringify(weatherData),
-      });
+
+      if (!('error' in weatherData)) {
+        weatherContext = `\n\n[WEATHER_DATA_FOR_CARD]\n${JSON.stringify(weatherData)}`;
+      }
     }
   }
 
@@ -79,21 +82,34 @@ export async function POST(req: Request) {
     messages: [
       {
         role: 'system',
-        content: `You are a helpful weather assistant. When you receive weather data in a function response, analyze it and provide personalized recommendations.
+        content: `You are a helpful weather assistant.
 
-For packing advice, consider:
-- Temperature: Cold (<10°C) = warm layers, jackets. Mild (10-20°C) = light jacket. Warm (>20°C) = light clothes
-- Rain/conditions: Suggest umbrella, raincoat, waterproof shoes
-- Wind: Recommend windbreaker, scarf
-- Humidity: Breathable fabrics for high humidity
+CRITICAL RULE: When you see [WEATHER_DATA_FOR_CARD] in the user message, you MUST output the structured block FIRST, before any other text:
 
-Be conversational, friendly, and practical!`,
+<weather_data>
+PASTE THE EXACT JSON FROM [WEATHER_DATA_FOR_CARD] HERE — do not change any values
+</weather_data>
+
+Then on a new line, provide your friendly weather summary and packing advice.
+
+Packing guidelines:
+- <10°C → warm layers, thick jacket, gloves
+- 10–20°C → light jacket or sweater
+- >20°C → light, breathable clothes
+- Rain/Drizzle/Thunderstorm → umbrella, waterproof shoes
+- High wind → windbreaker, scarf
+- High humidity → breathable fabrics
+
+If no [WEATHER_DATA_FOR_CARD] is present, answer normally without the block.`,
       },
-      ...updatedMessages,
+      ...messages.slice(0, -1),
+      {
+        role: 'user',
+        content: lastMessage.content + weatherContext,
+      },
     ],
   });
 
-  // Create a ReadableStream compatible with Vercel AI SDK
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -101,8 +117,11 @@ Be conversational, friendly, and practical!`,
         for await (const chunk of response) {
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
-            // Format as data stream for AI SDK
-            controller.enqueue(encoder.encode(`0:"${content.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`));
+            controller.enqueue(
+              encoder.encode(
+                `0:"${content.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"\n`
+              )
+            );
           }
         }
         controller.close();
