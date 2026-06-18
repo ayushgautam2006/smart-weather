@@ -39,7 +39,7 @@ export default function Home() {
             </div>
 
             {/* Chat Container */}
-            <div className="lg:col-span-2 bg-blue-200 dark:bg-blue-900/55 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden">
+            <div className="lg:col-span-2 bg-blue-200 dark:bg-red-700/20 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden">
               {/* Messages */}
               <div className="h-[500px] overflow-y-auto p-6 space-y-4">
                 {messages.length === 0 ? (
@@ -63,7 +63,7 @@ export default function Home() {
                       if (message.role === 'user') {
                         return (
                           <div key={message.id} className="flex justify-end">
-                            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-blue-600 text-white whitespace-pre-wrap">
+                            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-red-700 text-white whitespace-pre-wrap">
                               {message.content}
                             </div>
                           </div>
@@ -77,7 +77,7 @@ export default function Home() {
                           <div className="max-w-[80%] space-y-2">
                             {weatherData && <WeatherCard data={weatherData} />}
                             {cleanText && (
-                              <div className="rounded-2xl px-4 py-3 bg-gray-100/80 dark:bg-gray-700/80 text-gray-900 dark:text-white whitespace-pre-wrap">
+                              <div className="rounded-2xl px-4 py-3 bg-red-100/80 dark:bg-red-900 text-gray-900 dark:text-white whitespace-pre-wrap">
                                 {cleanText}
                               </div>
                             )}
@@ -102,7 +102,7 @@ export default function Home() {
               </div>
 
               {/* Input Form */}
-              <form onSubmit={handleSubmit} className="border-t border-blue-200 dark:border-white-700 p-4">
+              <form onSubmit={handleSubmit} className="border-t border-blue-200 dark:border-red-700/20 p-4">
                 <div className="flex space-x-2">
                   <input
                     type="text"
