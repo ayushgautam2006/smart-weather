@@ -1,21 +1,21 @@
 import type { WeatherData } from '@/lib/parseWeather';
 
 const conditionColors: Record<string, string> = {
-    Clear: 'from-amber-400 to-orange-500',
-    Clouds: 'from-slate-400 to-slate-600',
-    Rain: 'from-blue-500 to-blue-800',
-    Drizzle: 'from-blue-400 to-cyan-600',
-    Thunderstorm: 'from-gray-700 to-gray-900',
-    Snow: 'from-blue-100 to-slate-300',
-    Mist: 'from-gray-400 to-gray-600',
-    Fog: 'from-gray-400 to-gray-600',
+    Clear: 'from-amber-400/80 to-orange-500/80',
+    Clouds: 'from-slate-400/80 to-slate-600/80',
+    Rain: 'from-blue-500/80 to-blue-800/80',
+    Drizzle: 'from-blue-400/80 to-cyan-600/80',
+    Thunderstorm: 'from-gray-700/80 to-gray-900/80',
+    Snow: 'from-blue-100/80 to-slate-300/80',
+    Mist: 'from-gray-400/80 to-gray-600/80',
+    Fog: 'from-gray-400/80 to-gray-600/80',
 };
 
 export function WeatherCard({ data }: { data: WeatherData }) {
-    const gradient = conditionColors[data.conditions] ?? 'from-blue-500 to-indigo-600';
+    const gradient = conditionColors[data.conditions] ?? 'from-blue-500/80 to-indigo-600/80';
 
     return (
-        <div className={`mt-2 rounded-2xl bg-gradient-to-br ${gradient} text-white p-4 w-full max-w-sm shadow-lg`}>
+        <div className={`mt-2 rounded-2xl bg-gradient-to-br ${gradient} text-white p-5 w-full max-w-sm shadow-lg backdrop-blur-md border border-white/10`}>
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
                 <div>
