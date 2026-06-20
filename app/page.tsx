@@ -27,7 +27,7 @@ export default function Home() {
                 <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-[0_2px_8px_rgba(255,255,255,0.25)]">
                   Smart Weather
                 </h1>
-                <p className="text-white/70 text-sm mt-2 leading-relaxed">
+                <p className="text-white/70 text-sm mt-2 leading-relaxed mb-3">
                   Real-time weather tracking and AI assistant to help you plan clothes, packing, and itineraries.
                 </p>
               </div>
